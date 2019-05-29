@@ -68,6 +68,10 @@ bool AppenderAttachable::isAttached(const AppenderSharedPtr &appender) const
 
 void AppenderAttachable::removeAllAppenders()
 {
+    foreach (auto appeder, mAppenders)
+    {
+        qobject_cast<AppenderSkeleton *>(appeder.data())->flush();
+    }
     mAppenders.clear();
 }
 

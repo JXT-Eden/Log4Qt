@@ -131,6 +131,11 @@ bool WriterAppender::requiresLayout() const
     return true;
 }
 
+void WriterAppender::flush()
+{
+    mWriter->flush();
+}
+
 void WriterAppender::append(const LoggingEvent &event)
 {
     Q_ASSERT_X(layout(), "WriterAppender::append()", "Layout must not be null");

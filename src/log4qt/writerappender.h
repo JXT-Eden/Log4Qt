@@ -87,7 +87,7 @@ public:
     QTextCodec *encoding() const;
     bool immediateFlush() const;
     QTextStream *writer() const;
-
+    void flush();
     /*!
      * Sets the codec used by the writer to \a pTextCoded.
      *

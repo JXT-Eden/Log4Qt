@@ -364,7 +364,7 @@ AppenderSharedPtr PropertyConfigurator::parseAppender(const Properties &properti
     }
 
     QString key = appender_prefix + name;
-    QString value = OptionConverter::findAndSubst(properties, key);
+    QString value = OptionConverter::findAndSubst(properties, key).trimmed();
     if (value.isNull())
     {
         LogError e = LOG4QT_ERROR(QT_TR_NOOP("Missing appender definition for appender named '%1'"),

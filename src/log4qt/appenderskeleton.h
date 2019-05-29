@@ -98,6 +98,7 @@ public:
     void addFilter(const FilterSharedPtr &filter) override;
     void clearFilters() override;
     void close() override;
+    virtual void flush(){}
 
     /*!
      * Performs checks and delegates the actuall appending to the subclass
