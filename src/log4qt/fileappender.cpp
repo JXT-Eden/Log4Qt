@@ -32,6 +32,7 @@
 #include <QFileInfo>
 #include <QTextStream>
 #include <QTextCodec>
+#include <QTimer>
 
 // if we are in WIN*
 #ifdef Q_OS_WIN
@@ -46,7 +47,8 @@ FileAppender::FileAppender(QObject *parent) :
     mAppendFile(false),
     mBufferedIo(true),
     mFile(nullptr),
-    mTextStream(nullptr)
+    mTextStream(nullptr),
+    timer(nullptr)
 {
 }
 
@@ -58,7 +60,8 @@ FileAppender::FileAppender(const LayoutSharedPtr &layout,
     mBufferedIo(true),
     mFileName(fileName),
     mFile(nullptr),
-    mTextStream(nullptr)
+    mTextStream(nullptr),
+    timer(nullptr)
 {
 }
 
@@ -71,7 +74,8 @@ FileAppender::FileAppender(const LayoutSharedPtr &layout,
     mBufferedIo(true),
     mFileName(fileName),
     mFile(nullptr),
-    mTextStream(nullptr)
+    mTextStream(nullptr),
+    timer(nullptr)
 {
 }
 
@@ -86,7 +90,8 @@ FileAppender::FileAppender(const LayoutSharedPtr &layout,
     mBufferedIo(buffered),
     mFileName(fileName),
     mFile(nullptr),
-    mTextStream(nullptr)
+    mTextStream(nullptr),
+    timer(nullptr)
 {
 }
 
@@ -94,22 +99,31 @@ FileAppender::~FileAppender()
 {
     closeInternal();
 }
-
+#include <stdio.h>
 void FileAppender::activateOptions()
 {
-    QMutexLocker locker(&mObjectGuard);
-
-    if (mFileName.isEmpty())
     {
-        LogError e = LOG4QT_QCLASS_ERROR(QT_TR_NOOP("Activation of Appender '%1' that requires file and has no file set"),
-                                         APPENDER_ACTIVATE_MISSING_FILE_ERROR);
-        e << name();
-        logger()->error(e);
-        return;
+        QMutexLocker locker(&mObjectGuard);
+
+        if (mFileName.isEmpty())
+        {
+            LogError e = LOG4QT_QCLASS_ERROR(QT_TR_NOOP("Activation of Appender '%1' that requires file and has no file set"),
+                                             APPENDER_ACTIVATE_MISSING_FILE_ERROR);
+            e << name();
+            logger()->error(e);
+            return;
+        }
+        closeFile();
+        openFile();
+        WriterAppender::activateOptions();
     }
-    closeFile();
-    openFile();
-    WriterAppender::activateOptions();
+
+    if (mFile && mTextStream)
+    {
+        timer = new QTimer;
+        connect(timer,&QTimer::timeout,this,&FileAppender::slot_timeout);
+        timer->start(30000);
+    }
 }
 
 void FileAppender::close()
@@ -121,6 +135,9 @@ void FileAppender::close()
 
 void FileAppender::closeInternal()
 {
+    if (timer && timer->isActive())
+        timer->stop();
+
     QMutexLocker locker(&mObjectGuard);
 
     if (isClosed())
@@ -239,6 +256,11 @@ bool FileAppender::renameFile(QFile &file,
     e.addCausingError(LogError(file.errorString(), file.error()));
     logger()->error(e);
     return false;
+}
+
+void FileAppender::slot_timeout()
+{
+    flush();
 }
 
 } // namespace Log4Qt

@@ -29,6 +29,7 @@
 
 class QFile;
 class QTextStream;
+class QTimer;
 
 namespace Log4Qt
 {
@@ -150,13 +151,15 @@ protected:
      */
     bool renameFile(QFile &file,
                     const QString &fileName) const;
-
+public slots:
+    void slot_timeout();
 private:
     volatile bool mAppendFile;
     volatile bool mBufferedIo;
     QString mFileName;
     QFile *mFile;
     QTextStream *mTextStream;
+    QTimer* timer;
     void closeInternal();
 };
 
