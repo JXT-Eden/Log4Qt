@@ -122,7 +122,7 @@ void FileAppender::activateOptions()
     {
         timer = new QTimer;
         connect(timer,&QTimer::timeout,this,&FileAppender::slot_timeout);
-        timer->start(30000);
+        timer->start(15000);
     }
 }
 
