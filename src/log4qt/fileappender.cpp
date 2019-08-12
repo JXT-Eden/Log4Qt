@@ -33,6 +33,8 @@
 #include <QTextStream>
 #include <QTextCodec>
 #include <QTimer>
+#include <QCoreApplication>
+#include <QDateTime>
 
 // if we are in WIN*
 #ifdef Q_OS_WIN
@@ -48,7 +50,9 @@ FileAppender::FileAppender(QObject *parent) :
     mBufferedIo(true),
     mFile(nullptr),
     mTextStream(nullptr),
-    timer(nullptr)
+    timer(nullptr),
+    dellog_timer(nullptr),
+    mDelLog(true)
 {
 }
 
@@ -61,7 +65,9 @@ FileAppender::FileAppender(const LayoutSharedPtr &layout,
     mFileName(fileName),
     mFile(nullptr),
     mTextStream(nullptr),
-    timer(nullptr)
+    timer(nullptr),
+    dellog_timer(nullptr),
+    mDelLog(true)
 {
 }
 
@@ -75,7 +81,9 @@ FileAppender::FileAppender(const LayoutSharedPtr &layout,
     mFileName(fileName),
     mFile(nullptr),
     mTextStream(nullptr),
-    timer(nullptr)
+    timer(nullptr),
+    dellog_timer(nullptr),
+    mDelLog(true)
 {
 }
 
@@ -91,7 +99,9 @@ FileAppender::FileAppender(const LayoutSharedPtr &layout,
     mFileName(fileName),
     mFile(nullptr),
     mTextStream(nullptr),
-    timer(nullptr)
+    timer(nullptr),
+    dellog_timer(nullptr),
+    mDelLog(true)
 {
 }
 
@@ -99,9 +109,11 @@ FileAppender::~FileAppender()
 {
     closeInternal();
 }
-#include <stdio.h>
+
 void FileAppender::activateOptions()
 {
+    slot_timeout_dellog();
+
     {
         QMutexLocker locker(&mObjectGuard);
 
@@ -121,8 +133,12 @@ void FileAppender::activateOptions()
     if (mFile && mTextStream)
     {
         timer = new QTimer;
-        connect(timer,&QTimer::timeout,this,&FileAppender::slot_timeout);
-        timer->start(15000);
+        connect(timer,&QTimer::timeout,this,&FileAppender::slot_timeout_flush);
+        timer->start(10000);
+
+        dellog_timer = new QTimer;
+        connect(dellog_timer,&QTimer::timeout,this,&FileAppender::slot_timeout_dellog);
+        timer->start(24 * 60 * 60 * 1000);
     }
 }
 
@@ -130,13 +146,17 @@ void FileAppender::close()
 {
     closeInternal();
     WriterAppender::close();
-
 }
 
 void FileAppender::closeInternal()
 {
+    mDelLog = false;
+
     if (timer && timer->isActive())
         timer->stop();
+
+    if (dellog_timer && dellog_timer->isActive())
+        dellog_timer->stop();
 
     QMutexLocker locker(&mObjectGuard);
 
@@ -258,9 +278,36 @@ bool FileAppender::renameFile(QFile &file,
     return false;
 }
 
-void FileAppender::slot_timeout()
+void FileAppender::slot_timeout_flush()
 {
     flush();
+}
+
+void FileAppender::slot_timeout_dellog()
+{
+    QString appPath = QString("%1/../log/").arg(QCoreApplication::applicationDirPath());
+
+    QDir log(appPath);
+    log.setNameFilters(QStringList("*.log"));
+    QFileInfoList list = log.entryInfoList();
+
+    QDateTime current_date = QDateTime::currentDateTime();
+
+    foreach (QFileInfo info, list)
+    {
+        if (!mDelLog)
+            break;
+
+        QString file = info.fileName();
+        QStringList lsplit = file.split(".");
+        QDateTime file_date = QDateTime::fromString(lsplit.at(1),"yyyy-MM-dd");
+        if (30 < file_date.daysTo(current_date))
+        {
+            if (!QFile::remove(QString("%1%2").arg(appPath).arg(file)))
+                logger()->error(QString("remove log file: %1 failed file:%2 func:%3 line:%4").arg(file).
+                                arg(__FILE__).arg(__FUNCTION__).arg(__LINE__));
+        }
+    }
 }
 
 } // namespace Log4Qt

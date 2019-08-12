@@ -152,14 +152,17 @@ protected:
     bool renameFile(QFile &file,
                     const QString &fileName) const;
 public slots:
-    void slot_timeout();
+    void slot_timeout_flush();
+    void slot_timeout_dellog();
 private:
     volatile bool mAppendFile;
     volatile bool mBufferedIo;
+    volatile bool mDelLog;
     QString mFileName;
     QFile *mFile;
     QTextStream *mTextStream;
     QTimer* timer;
+    QTimer* dellog_timer;
     void closeInternal();
 };
 
