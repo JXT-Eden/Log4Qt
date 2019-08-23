@@ -138,7 +138,7 @@ void FileAppender::activateOptions()
 
         dellog_timer = new QTimer;
         connect(dellog_timer,&QTimer::timeout,this,&FileAppender::slot_timeout_dellog);
-        timer->start(24 * 60 * 60 * 1000);
+        dellog_timer->start(24 * 60 * 60 * 1000);
     }
 }
 
